@@ -95,7 +95,13 @@ module EventMachine
             # one of the injected middlewares could have changed
             # our redirect settings, check if we still want to
             # follow the location header
-            if redirect?
+
+            # issue #334: you can have a response code which is in the
+            # "redirect" range *without* a Location header; indeed
+            # this may not be aggressive enough (ie perhaps we should
+            # also check if the header is well-formed before
+            # committing more resources)
+            if redirect? && @response_header.location
               @req.followed += 1
 
               @cookies.clear
