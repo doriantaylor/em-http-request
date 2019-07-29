@@ -427,4 +427,28 @@ describe EventMachine::HttpRequest do
       }
     }
   end
+
+  it "should not crash when the Location header is missing" do
+    Timeout.timeout(1) {
+      EventMachine.run {
+        response =<<-HTTP.gsub(/^ +/, '')
+          HTTP/1.1 301 MOVED PERMANENTLY
+          Content-Length: 0
+
+        HTTP
+
+        stub_server = StubServer.new(:host => '127.0.0.1', :port => 8070, :keepalive => true, :response => response)
+        conn = EventMachine::HttpRequest.new('http://127.0.0.1:8070/', :inactivity_timeout => 60)
+        http = conn.get :redirects => 1, :keepalive => true
+        http.errback { failed(http) }
+        http.callback {
+          http.redirects.should == 0
+
+          stub_server.stop
+          EM.stop
+        }
+      }
+    }
+  end
+
 end
